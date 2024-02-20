@@ -102,6 +102,7 @@ class Rigid():
         self.maxAxisError = 0.0         # This is an avaverage of all single spins
         self.maxSingleAxisError = 0.0   # Also the max single Axis spin has to be checked for solvability
         self.refPointsBoundBoxSize = 0.0
+        self.refPoints = []  # Initialize instance variable to store boundary box reference points
         self.countSpinVectors = 0
         self.currentDOFCount = 6
         self.superRigid = None  #if not None, it means that when action performed to this rigid,
@@ -238,14 +239,14 @@ class Rigid():
             None
         """
         # Initialize variables
-        refPoints = [dep.refPoint for dep in self.dependencies if dep.refPoint is not None]
+        self.refPoints = [dep.refPoint for dep in self.dependencies if dep.refPoint is not None]
 
         # Check if there are any valid reference points
-        if refPoints:
+        if self.refPoints:
             # Calculate the sum of all reference points
-            totalRefPoint = sum(refPoints, Base.Vector(0, 0, 0))
+            totalRefPoint = sum(self.refPoints, Base.Vector(0, 0, 0))
             # Calculate the average by dividing the sum by the number of reference points
-            self.spinCenter = totalRefPoint / len(refPoints)
+            self.spinCenter = totalRefPoint / len(self.refPoints)
 
     def calcSpinBasicDataDepsEnabled(self):
         """
@@ -260,7 +261,7 @@ class Rigid():
         # Initialize variables
         newSpinCenter = Base.Vector(0, 0, 0)
         countRefPoints = 0
-        refPoints = []  # Collect reference points for bounding box calculation
+        # refPoints = []  # Collect reference points for bounding box calculation
 
         # Iterate over enabled dependencies
         for dep in self.dependencies:
@@ -268,7 +269,7 @@ class Rigid():
                 # Accumulate reference points and count
                 newSpinCenter += dep.refPoint
                 countRefPoints += 1
-                refPoints.append(dep.refPoint)
+                self.refPoints.append(dep.refPoint)  # Store reference point in instance variable
 
         # Calculate the spin center if there are any reference points
         if countRefPoints > 0:
@@ -276,10 +277,12 @@ class Rigid():
             self.spinCenter = newSpinCenter
 
             # Calculate bounding box size
-            minPoint = Base.Vector(min(refPoints, key=lambda p: p.x).x, min(refPoints, key=lambda p: p.y).y,
-                                min(refPoints, key=lambda p: p.z).z)
-            maxPoint = Base.Vector(max(refPoints, key=lambda p: p.x).x, max(refPoints, key=lambda p: p.y).y,
-                                max(refPoints, key=lambda p: p.z).z)
+            minPoint = Base.Vector(min(self.refPoints, key=lambda p: p.x).x,
+                                    min(self.refPoints, key=lambda p: p.y).y,
+                                    min(self.refPoints, key=lambda p: p.z).z)
+            maxPoint = Base.Vector(max(self.refPoints, key=lambda p: p.x).x,
+                                    max(self.refPoints, key=lambda p: p.y).y,
+                                    max(self.refPoints, key=lambda p: p.z).z)
             self.refPointsBoundBoxSize = maxPoint.sub(minPoint).Length
 
     def calcRefPointsBoundBoxSizeDepsEnabled(self):
@@ -295,6 +298,10 @@ class Rigid():
         first_dep = next((dep for dep in self.dependencies if dep.Enabled), None)
         if first_dep is None:
             return  # No enabled dependencies, exit early
+        
+        # Store reference points in the instance variable
+        self.refPoints = [first_dep.refPoint]
+        
         xmin = xmax = first_dep.refPoint.x
         ymin = ymax = first_dep.refPoint.y
         zmin = zmax = first_dep.refPoint.z
@@ -309,6 +316,7 @@ class Rigid():
                 ymax = max(ymax, dep.refPoint.y)
                 zmin = min(zmin, dep.refPoint.z)
                 zmax = max(zmax, dep.refPoint.z)
+                self.refPoints.append(dep.refPoint)  # Store reference point in instance variable
 
         # Calculate bounding box size using Euclidean distance formula
         self.refPointsBoundBoxSize = math.sqrt((xmax - xmin) ** 2 + (ymax - ymin) ** 2 + (zmax - zmin) ** 2)
@@ -327,6 +335,10 @@ class Rigid():
         first_dep = next(iter(self.dependencies), None)
         if first_dep is None:
             return  # No dependencies, exit early
+        
+        # Store reference points in the instance variable
+        self.refPoints = [first_dep.refPoint]
+
         xmin = xmax = first_dep.refPoint.x
         ymin = ymax = first_dep.refPoint.y
         zmin = zmax = first_dep.refPoint.z
@@ -340,6 +352,7 @@ class Rigid():
             ymax = max(ymax, dep.refPoint.y)
             zmin = min(zmin, dep.refPoint.z)
             zmax = max(zmax, dep.refPoint.z)
+            self.refPoints.append(dep.refPoint)  # Store reference point in instance variable
 
         # Calculate bounding box size using Euclidean distance formula
         self.refPointsBoundBoxSize = math.sqrt((xmax - xmin) ** 2 + (ymax - ymin) ** 2 + (zmax - zmin) ** 2)

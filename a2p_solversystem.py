@@ -273,6 +273,60 @@ class SolverSystem():
                     dofLabel.ViewObject.TextColor = a2plib.BLACK
                     dofGroup.addObject(dofLabel)
 
+    def calculate_bounding_box(points):
+        min_x = min(point.x for point in points)
+        max_x = max(point.x for point in points)
+        min_y = min(point.y for point in points)
+        max_y = max(point.y for point in points)
+        min_z = min(point.z for point in points)
+        max_z = max(point.z for point in points)
+        return (min_x, min_y, min_z), (max_x, max_y, max_z)
+
+    def performPostSolutionCollisionDetection(self):
+        """
+        Perform post-solution collision detection between rigid bodies.
+        """
+        # Check for collisions using bounding boxes
+        num_rigids = len(self.rigids)
+        for idx_rigid_i in range(num_rigids):
+            for idx_rigid_j in range(idx_rigid_i + 1, num_rigids):
+                rigid_i = self.rigids[idx_rigid_i]
+                rigid_j = self.rigids[idx_rigid_j]
+                
+                # Calculate the bounding box for rigid_i
+                bbox_i_min, bbox_i_max = calculate_bounding_box(rigid_i.refPoints)
+                
+                # Calculate the bounding box for rigid_j
+                bbox_j_min, bbox_j_max = calculate_bounding_box(rigid_j.refPoints)
+                
+                # Check for intersection between bounding boxes
+                if (bbox_i_min[0] <= bbox_j_max[0] and bbox_i_max[0] >= bbox_j_min[0] and
+                    bbox_i_min[1] <= bbox_j_max[1] and bbox_i_max[1] >= bbox_j_min[1] and
+                    bbox_i_min[2] <= bbox_j_max[2] and bbox_i_max[2] >= bbox_j_min[2]):
+                    # Perform more accurate collision detection between rigid_i and rigid_j
+                    if check_collision(rigid_i, rigid_j):
+                        # Handle collision between rigid_i and rigid_j
+                        # handle_collision(rigid_i, rigid_j)
+                        print('Collision detected!')
+                        
+    def check_collision(rigid1, rigid2):
+        """
+        Check for collision between two rigid bodies.
+
+        Args:
+            rigid1 (Rigid): First rigid body.
+            rigid2 (Rigid): Second rigid body.
+
+        Returns:
+            bool: True if collision detected, False otherwise.
+        """
+        # Extract bounding boxes of the rigid bodies
+        bbox1 = rigid1.refPoints
+        bbox2 = rigid2.refPoints
+        
+        # Check for intersection between bounding boxes
+        return bbox1.intersects(bbox2)
+        
     def retrieveDOFInfo(self):
         """
         Method used to retrieve all info related to DOF handling.
@@ -416,7 +470,10 @@ class SolverSystem():
             if a2plib.SOLVER_ONESTEP > 0:
                 systemSolved = True
                 break
-
+            
+            # Perform post-solution collision detection
+            self.performPostSolutionCollisionDetection()
+            
             # If system is solved, increment accuracy level and load the system for the new level
             if systemSolved:
                 self.level_of_accuracy += 1
