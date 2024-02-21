@@ -273,6 +273,7 @@ class SolverSystem():
                     dofLabel.ViewObject.TextColor = a2plib.BLACK
                     dofGroup.addObject(dofLabel)
 
+    @staticmethod
     def calculate_bounding_box(points):
         min_x = min(point.x for point in points)
         max_x = max(point.x for point in points)
@@ -292,12 +293,12 @@ class SolverSystem():
             for idx_rigid_j in range(idx_rigid_i + 1, num_rigids):
                 rigid_i = self.rigids[idx_rigid_i]
                 rigid_j = self.rigids[idx_rigid_j]
-                
+
                 # Calculate the bounding box for rigid_i
-                bbox_i_min, bbox_i_max = calculate_bounding_box(rigid_i.refPoints)
+                bbox_i_min, bbox_i_max = SolverSystem.calculate_bounding_box(rigid_i.refPoints)
                 
                 # Calculate the bounding box for rigid_j
-                bbox_j_min, bbox_j_max = calculate_bounding_box(rigid_j.refPoints)
+                bbox_j_min, bbox_j_max = SolverSystem.calculate_bounding_box(rigid_j.refPoints)
                 
                 # Check for intersection between bounding boxes
                 if (bbox_i_min[0] <= bbox_j_max[0] and bbox_i_max[0] >= bbox_j_min[0] and
