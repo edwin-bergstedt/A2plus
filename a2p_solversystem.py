@@ -282,6 +282,28 @@ class SolverSystem():
         min_z = min(point.z for point in points)
         max_z = max(point.z for point in points)
         return (min_x, min_y, min_z), (max_x, max_y, max_z)
+    
+    @staticmethod                    
+    def check_collision(bbox1_min, bbox1_max, bbox2_min, bbox2_max):
+        """
+        Check for collision between two rigid bodies.
+
+        Args:
+            bbox1_min (tuple): Minimum coordinates of the bounding box of the first rigid body.
+            bbox1_max (tuple): Maximum coordinates of the bounding box of the first rigid body.
+            bbox2_min (tuple): Minimum coordinates of the bounding box of the second rigid body.
+            bbox2_max (tuple): Maximum coordinates of the bounding box of the second rigid body.
+
+        Returns:
+            bool: True if collision detected, False otherwise.
+        """
+        # Check for intersection between bounding boxes
+        if (bbox1_min[0] <= bbox2_max[0] and bbox1_max[0] >= bbox2_min[0] and
+            bbox1_min[1] <= bbox2_max[1] and bbox1_max[1] >= bbox2_min[1] and
+            bbox1_min[2] <= bbox2_max[2] and bbox1_max[2] >= bbox2_min[2]):
+            return True
+        else:
+            return False
 
     def performPostSolutionCollisionDetection(self):
         """
@@ -301,32 +323,14 @@ class SolverSystem():
                 bbox_j_min, bbox_j_max = SolverSystem.calculate_bounding_box(rigid_j.refPoints)
                 
                 # Check for intersection between bounding boxes
-                if (bbox_i_min[0] <= bbox_j_max[0] and bbox_i_max[0] >= bbox_j_min[0] and
-                    bbox_i_min[1] <= bbox_j_max[1] and bbox_i_max[1] >= bbox_j_min[1] and
-                    bbox_i_min[2] <= bbox_j_max[2] and bbox_i_max[2] >= bbox_j_min[2]):
-                    # Perform more accurate collision detection between rigid_i and rigid_j
-                    if check_collision(rigid_i, rigid_j):
-                        # Handle collision between rigid_i and rigid_j
-                        # handle_collision(rigid_i, rigid_j)
-                        print('Collision detected!')
-                        
-    def check_collision(rigid1, rigid2):
-        """
-        Check for collision between two rigid bodies.
-
-        Args:
-            rigid1 (Rigid): First rigid body.
-            rigid2 (Rigid): Second rigid body.
-
-        Returns:
-            bool: True if collision detected, False otherwise.
-        """
-        # Extract bounding boxes of the rigid bodies
-        bbox1 = rigid1.refPoints
-        bbox2 = rigid2.refPoints
-        
-        # Check for intersection between bounding boxes
-        return bbox1.intersects(bbox2)
+            if (bbox_i_min[0] <= bbox_j_max[0] and bbox_i_max[0] >= bbox_j_min[0] and
+                bbox_i_min[1] <= bbox_j_max[1] and bbox_i_max[1] >= bbox_j_min[1] and
+                bbox_i_min[2] <= bbox_j_max[2] and bbox_i_max[2] >= bbox_j_min[2]):
+                # Perform more accurate collision detection between rigid_i and rigid_j
+                if SolverSystem.check_collision(bbox_i_min, bbox_i_max, bbox_j_min, bbox_j_max):
+                    # Handle collision between rigid_i and rigid_j
+                    # handle_collision(rigid_i, rigid_j)
+                    print('Collision detected!')
         
     def retrieveDOFInfo(self):
         """
