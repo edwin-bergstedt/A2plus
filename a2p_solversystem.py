@@ -39,7 +39,7 @@ from a2p_dependencies import Dependency
 from a2p_rigid import Rigid
 
 SOLVER_MAXSTEPS = 50000
-MAX_CONVERGENCY_COUNTER = 50000  # Define the maximum number of convergency attempts allowed
+MAX_CONVERGENCY_COUNTER = 500  # Define the maximum number of convergency attempts allowed
 translate = FreeCAD.Qt.translate
 
 # SOLVER_CONTROLDATA has been replaced by SolverSystem.getSolverControlData()
@@ -55,7 +55,7 @@ translate = FreeCAD.Qt.translate
 SOLVER_POS_ACCURACY = 1.0e-1  # gets to smaller values during solving
 SOLVER_SPIN_ACCURACY = 1.0e-1 # gets to smaller values during solving
 
-SOLVER_STEPS_CONVERGENCY_CHECK = 500 #200
+SOLVER_STEPS_CONVERGENCY_CHECK = 150 #200
 SOLVER_CONVERGENCY_FACTOR = 0.99
 SOLVER_CONVERGENCY_ERROR_INIT_VALUE = 1.0e+20
 
@@ -408,7 +408,7 @@ class SolverSystem():
         # Iteratively refine accuracy level until convergence or maximum level
         while True:
             # Calculate chain and check if the system is solved
-            # self.profile_calculateChain(doc)
+            self.profile_calculateChain(doc)
             systemSolved = self.calculateChain(doc)
             
             # Detect unmoved parts if accuracy level is 1
