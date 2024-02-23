@@ -85,6 +85,8 @@ class SolverSystem():
         self.maxAxisError = 0.0
         self.maxSingleAxisError = 0.0
         self.unmovedParts = []
+        # Initialize cache dictionary to store positions of rigids and their solutions
+        self.rigid_positions_cache = {}
 
     def clear(self):
         for r in self.rigids:
@@ -561,57 +563,56 @@ to a fixed part!
         for e in l:
             Msg( "{} ".format(e.label) )
         Msg("):\n")
-
+        
+    def get_rigid_positions(self):
+            # Return a tuple of positions of all rigids
+            return tuple(rig.position for rig in self.rigids)
+    
     def calculateChain(self, doc):
+        # Initialize step count and work list
         self.stepCount = 0
         workList = []
 
-        if a2plib.SIMULATION_STATE == True:
-            # Solve complete System at once if simulation is running
+        if a2plib.SIMULATION_STATE or not a2plib.PARTIAL_PROCESSING_ENABLED:
+            # Solve complete System at once if simulation is running or partial processing is disabled
             workList = self.rigids
             solutionFound = self.calculateWorkList(doc, workList)
-            if not solutionFound: return False
-            return True
-        elif a2plib.PARTIAL_PROCESSING_ENABLED == False:
-            # Solve complete System at once
-            workList = self.rigids
-            solutionFound = self.calculateWorkList(doc, workList)
-            if not solutionFound: return False
-            return True
-        else:
-            # Normal partial solving if no simulation is running
-            # load initial worklist with all fixed parts...
-            for rig in self.rigids:
-                if rig.fixed:
-                    workList.append(rig);
-            #self.printList("Initial-Worklist", workList)
+            return solutionFound
 
-            while True:
-                addList = []
-                newRigFound = False
+        # Normal partial solving if no simulation is running and partial processing is enabled
+        # Load initial worklist with all fixed parts
+        workList.extend(rig for rig in self.rigids if rig.fixed)
+
+        while True:
+            addList = set()
+            newRigFound = False
+            
+            for rig in workList:
+                for linkedRig in rig.linkedRigids:
+                    if linkedRig not in workList and rig.isFullyConstrainedByRigid(linkedRig):
+                        addList.add(linkedRig)
+                        newRigFound = True
+                        break
+            
+            if not newRigFound:
                 for rig in workList:
-                    for linkedRig in rig.linkedRigids:
-                        if linkedRig in workList: continue
-                        if rig.isFullyConstrainedByRigid(linkedRig):
-                            addList.append(linkedRig)
-                            newRigFound = True
-                            break
-                if not newRigFound:
-                    for rig in workList:
-                        addList.extend(rig.getCandidates())
-                addList = set(addList)
-                #self.printList("AddList", addList)
-                if len(addList) > 0:
-                    workList.extend(addList)
-                    solutionFound = self.calculateWorkList(doc, workList)
-                    if not solutionFound: return False
-                else:
-                    break
+                    addList.update(rig.getCandidates())
 
-                if a2plib.SOLVER_ONESTEP > 2:
-                    break
+            if addList:
+                # Update cached state for rigids being added to the work list
+                for rig in addList:
+                    rig.updateCachedState(rig.placement)
+                workList.extend(addList)
+                solutionFound = self.calculateWorkList(doc, workList)
+                if not solutionFound:
+                    return False
+            else:
+                break
 
-            return True
+            if a2plib.SOLVER_ONESTEP > 2:
+                break
+            
+        return True
 
     def calculateWorkList(self, doc, workList):
         reqPosAccuracy = self.mySOLVER_POS_ACCURACY
