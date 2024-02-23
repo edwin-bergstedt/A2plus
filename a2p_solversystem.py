@@ -36,6 +36,7 @@ from a2plib import (
     )
 from a2p_dependencies import Dependency
 from a2p_rigid import Rigid
+import cProfile
 
 SOLVER_MAXSTEPS = 50000
 translate = FreeCAD.Qt.translate
@@ -457,6 +458,8 @@ class SolverSystem():
             return
         self.assignParentship(doc)
         while True:
+            # Calculate chain and check if the system is solved
+            self.profile_calculateChain(doc)
             systemSolved = self.calculateChain(doc)
             if self.level_of_accuracy == 1:
                 self.detectUnmovedParts()   # do only once here. It can fail at higher accuracy levels
@@ -567,6 +570,13 @@ to a fixed part!
     def get_rigid_positions(self):
             # Return a tuple of positions of all rigids
             return tuple(rig.position for rig in self.rigids)
+    
+    def profile_calculateChain(self,doc):
+        profiler = cProfile.Profile()
+        profiler.enable()
+        self.calculateChain(doc)
+        profiler.disable()
+        profiler.print_stats()
     
     def calculateChain(self, doc):
         # Initialize step count and work list
