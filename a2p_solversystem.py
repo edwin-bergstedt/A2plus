@@ -53,7 +53,7 @@ translate = FreeCAD.Qt.translate
 SOLVER_POS_ACCURACY = 1.0e-1  # gets to smaller values during solving
 SOLVER_SPIN_ACCURACY = 1.0e-1 # gets to smaller values during solving
 
-SOLVER_STEPS_CONVERGENCY_CHECK = 150 #200
+SOLVER_STEPS_CONVERGENCY_CHECK = 2000 #200
 SOLVER_CONVERGENCY_FACTOR = 0.99
 SOLVER_CONVERGENCY_ERROR_INIT_VALUE = 1.0e+20
 
@@ -691,7 +691,6 @@ to a fixed part!
                         Msg('\n')
                         Msg('convergency-conter: {}\n'.format(self.convergencyCounter))
                         Msg(translate("A2plus", "Calculation stopped, no convergency anymore!") + "\n")
-                        return False
 
                 self.lastPositionError = maxPosError
                 self.lastAxisError = maxAxisError
