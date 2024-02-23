@@ -459,7 +459,7 @@ class SolverSystem():
         self.assignParentship(doc)
         while True:
             # Calculate chain and check if the system is solved
-            self.profile_calculateChain(doc)
+            # self.profile_calculateChain(doc)
             systemSolved = self.calculateChain(doc)
             if self.level_of_accuracy == 1:
                 self.detectUnmovedParts()   # do only once here. It can fail at higher accuracy levels
@@ -698,9 +698,10 @@ to a fixed part!
                         self.convergencyCounter = 0
                         continue
                     else:
-                        Msg('\n')
-                        Msg('convergency-conter: {}\n'.format(self.convergencyCounter))
-                        Msg(translate("A2plus", "Calculation stopped, no convergency anymore!") + "\n")
+                        pass
+                        # Msg('\n')
+                        # Msg('convergency-conter: {}\n'.format(self.convergencyCounter))
+                        # Msg(translate("A2plus", "Calculation stopped, no convergency anymore!") + "\n")
 
                 self.lastPositionError = maxPosError
                 self.lastAxisError = maxAxisError
