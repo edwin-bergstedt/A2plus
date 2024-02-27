@@ -411,58 +411,34 @@ class Dependency():
         raise NotImplementedError("Dependency class {} doesn't implement calcDOF, use inherited classes instead!".format(self.__class__.__name__))
 
 
+    
     def getRotation(self, solver):
-        if not self.Enabled: return None
-        if not self.axisRotationEnabled: return None
+        if not self.Enabled or not self.axisRotationEnabled:
+            return None
 
-        # The rotation is the same for all dependencies that enabled it
-        # Special dependency cases are implemented in its own class
+        rigAxis = self.refAxisEnd.sub(self.refPoint)
+        foreignDep = self.foreignDependency
+        foreignAxis = foreignDep.refAxisEnd.sub(foreignDep.refPoint)
 
-        axis = None # Rotation axis to be returned
+        # Check if axes alignment is within tolerance
+        dot = rigAxis.dot(foreignAxis)
+        if abs(dot + 1.0) < solver.mySOLVER_SPIN_ACCURACY * 1e-1:
+            # Add random disturbance to avoid false alignment
+            disturbVector = Base.Vector(
+                random.uniform(-solver.mySOLVER_SPIN_ACCURACY * 1e-1, solver.mySOLVER_SPIN_ACCURACY * 1e-1),
+                random.uniform(-solver.mySOLVER_SPIN_ACCURACY * 1e-1, solver.mySOLVER_SPIN_ACCURACY * 1e-1),
+                random.uniform(-solver.mySOLVER_SPIN_ACCURACY * 1e-1, solver.mySOLVER_SPIN_ACCURACY * 1e-1)
+            )
+            foreignAxis = foreignAxis.add(disturbVector)
 
-        if self.direction != "none":
-            rigAxis = self.refAxisEnd.sub(self.refPoint)
-            foreignDep = self.foreignDependency
-            foreignAxis = foreignDep.refAxisEnd.sub(foreignDep.refPoint)
-            #
-            #do we have wrong alignment of axes ??
-            dot = rigAxis.dot(foreignAxis)
-            if abs(dot+1.0) < solver.mySOLVER_SPIN_ACCURACY*1e-1: #both axes nearly aligned but false orientation...
-                x = random.uniform(-solver.mySOLVER_SPIN_ACCURACY*1e-1,solver.mySOLVER_SPIN_ACCURACY*1e-1)
-                y = random.uniform(-solver.mySOLVER_SPIN_ACCURACY*1e-1,solver.mySOLVER_SPIN_ACCURACY*1e-1)
-                z = random.uniform(-solver.mySOLVER_SPIN_ACCURACY*1e-1,solver.mySOLVER_SPIN_ACCURACY*1e-1)
-                disturbVector = Base.Vector(x,y,z)
-                foreignAxis = foreignAxis.add(disturbVector)
+        # Compute rotation axis
+        axis = rigAxis.cross(foreignAxis)
+        axis.multiply(1.0e6)
+        axis.normalize()
 
-            #axis = foreignAxis.cross(rigAxis)
-            axis = rigAxis.cross(foreignAxis)
-            try:
-                axis.multiply(1.0e6)
-                axis.normalize()
-                angle = foreignAxis.getAngle(rigAxis)
-                axis.multiply(math.degrees(angle))
-            except:
-                axis = None
-
-        else: #if dep.direction... (== none)
-            rigAxis = self.refAxisEnd.sub(self.refPoint)
-            foreignDep = self.foreignDependency
-            foreignAxis = foreignDep.refAxisEnd.sub(foreignDep.refPoint)
-            angle1 = abs(foreignAxis.getAngle(rigAxis))
-            angle2 = math.pi-angle1
-            #
-            if angle1<=angle2:
-                axis = rigAxis.cross(foreignAxis)
-            else:
-                foreignAxis.multiply(-1.0)
-                axis = rigAxis.cross(foreignAxis)
-            try:
-                axis.multiply(1.0e6)
-                axis.normalize()
-                angle = foreignAxis.getAngle(rigAxis)
-                axis.multiply(math.degrees(angle))
-            except:
-                axis = None
+        # Compute rotation angle
+        angle = foreignAxis.getAngle(rigAxis)
+        axis.multiply(math.degrees(angle))
 
         return axis
 
