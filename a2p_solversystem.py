@@ -459,7 +459,7 @@ class SolverSystem():
         self.assignParentship(doc)
         while True:
             # Calculate chain and check if the system is solved
-            # self.profile_calculateChain(doc)
+            self.profile_calculateChain(doc)
             systemSolved = self.calculateChain(doc)
             if self.level_of_accuracy == 1:
                 self.detectUnmovedParts()   # do only once here. It can fail at higher accuracy levels
@@ -584,10 +584,9 @@ to a fixed part!
         workList = []
 
         if a2plib.SIMULATION_STATE or not a2plib.PARTIAL_PROCESSING_ENABLED:
-            # Solve complete System at once if simulation is running or partial processing is disabled
+            # Solve complete system at once if simulation is running or partial processing is disabled
             workList = self.rigids
-            solutionFound = self.calculateWorkList(doc, workList)
-            return solutionFound
+            return self.calculateWorkList(doc, workList)
 
         # Normal partial solving if no simulation is running and partial processing is enabled
         # Load initial worklist with all fixed parts
@@ -597,6 +596,7 @@ to a fixed part!
             addList = set()
             newRigFound = False
             
+            # Check linked rigids for possible additions to the work list
             for rig in workList:
                 for linkedRig in rig.linkedRigids:
                     if linkedRig not in workList and rig.isFullyConstrainedByRigid(linkedRig):
@@ -605,6 +605,7 @@ to a fixed part!
                         break
             
             if not newRigFound:
+                # If no new rigids found, consider candidates for addition to the work list
                 for rig in workList:
                     addList.update(rig.getCandidates())
 
@@ -639,6 +640,12 @@ to a fixed part!
 
         calcCount = 0
         goodAccuracy = False
+        pos_error_check=True
+        maxAxisError_check=True
+        maxSingleAxisError_check=True
+        pos_error_save=[]
+        axis_error_save=[]
+        single_axis_error_save=[]
         while not goodAccuracy:
             maxPosError = 0.0
             maxAxisError = 0.0
@@ -662,6 +669,21 @@ to a fixed part!
             for w in workList:
                 w.move(doc)
 
+            if self.stepCount % 100 ==0:
+                pos_error_save.append(maxPosError-reqPosAccuracy)
+                axis_error_save.append(maxAxisError-reqSpinAccuracy)
+                single_axis_error_save.append(maxSingleAxisError-(reqSpinAccuracy*10))
+                
+            if maxPosError <= reqPosAccuracy and pos_error_check:
+                pos_error_check=False
+                maxPosError_itteration=self.stepCount
+            if maxAxisError <= reqSpinAccuracy and maxAxisError_check:
+                maxAxisError_check=False
+                maxAxisError_itteration=self.stepCount
+            if maxSingleAxisError <= reqSpinAccuracy * 10 and maxSingleAxisError_check:
+                maxSingleAxisError_check=False
+                maxSingleAxisError_itteration=self.stepCount
+                
             # The accuracy is good, apply the solution to FreeCAD's objects
             if (maxPosError <= reqPosAccuracy and   # relevant check
                 maxAxisError <= reqSpinAccuracy and # relevant check
@@ -670,6 +692,11 @@ to a fixed part!
                 ) or (a2plib.SOLVER_ONESTEP > 0):
                 # The accuracy is good, we're done here
                 goodAccuracy = True
+                # print(maxPosError_itteration,',',maxAxisError_itteration,',',maxSingleAxisError_itteration)
+                tmp={'Pos':pos_error_save,'Axis':axis_error_save,'Single Axis':single_axis_error_save}
+                print(tmp)
+                # print('Axis: ',maxAxisError_itteration)
+                # print('Single Axis: ',maxSingleAxisError_itteration)
                 # Mark the rigids as tempfixed and add its constrained rigids to pending list to be processed next
                 for r in workList:
                     r.applySolution(doc, self)
