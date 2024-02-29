@@ -82,6 +82,8 @@ class Rigid():
         self.tempfixed = fixed
         self.moved = False
         self.placement = placement
+        # Cached state attributes
+        self.initialPlacement = placement
         self.debugMode = debugMode
         self.savedPlacement = placement
         self.dependencies = []
@@ -310,7 +312,7 @@ class Rigid():
         depMoveVectors = []             #all moveVectors
         depRefPoints_Spin = []          #refPoints, relevant for spin generation...
         depMoveVectors_Spin = []        #depMoveVectors, relevant for spin generation...
-        #
+        # Initialize error variables
         self.maxPosError = 0.0
         self.maxAxisError = 0.0         # SpinError is an average of all single spins
         self.maxSingleAxisError = 0.0   # avoid average, to detect unsolvable assemblies
@@ -328,77 +330,69 @@ class Rigid():
             if dep.useRefPointSpin:
                 depRefPoints_Spin.append(refPoint)
                 depMoveVectors_Spin.append(moveVector)
-            '''
-            if not self.tempfixed:
-                a2plib.drawSphere(refPoint, a2plib.RED)
-                a2plib.drawVector(refPoint, refPoint.add(moveVector), a2plib.RED)
-            '''
+
             # Calculate max move error
-            if moveVector.Length > self.maxPosError: self.maxPosError = moveVector.Length
+            move_length = moveVector.Length
+            if move_length > self.maxPosError:
+                self.maxPosError = move_length
 
-            # Accomulate all the movements for later average calculations
-            self.moveVectorSum = self.moveVectorSum.add(moveVector)
+            # Accumulate all movements for later average calculations
+            self.moveVectorSum += moveVector
 
-        # Calculate the average of all the movements
-        if len(depMoveVectors) > 0:
-            self.moveVectorSum = self.moveVectorSum.multiply(1.0/len(depMoveVectors))
-
+        # Calculate the average of all movements
+        num_vectors = len(depMoveVectors)
+        if num_vectors > 0:
+            self.moveVectorSum *= (1.0 / num_vectors)
 
         #compute rotation caused by refPoint-attractions
         if len(depMoveVectors_Spin) >= 2:
-            #FIXME
-            self.spin = Base.Vector(0,0,0)
-            tmpSpinCenter = depRefPoints_Spin[0] # assume rigid spinning around first depRefPoint
+            self.spin = Base.Vector(0, 0, 0)
+            tmpSpinCenter = depRefPoints_Spin[0]
 
-            # Eliminate the offset of depRefPoint[0] from all depMoveVectors
-            offsetVector = Base.Vector(depMoveVectors_Spin[0]) # make a copy
-            for i in range(0, len(depMoveVectors_Spin)):
-                depMoveVectors_Spin[i] = depMoveVectors_Spin[i].sub(offsetVector)
+            for i in range(1, len(depRefPoints_Spin)):
+                vec1 = depRefPoints_Spin[i] - tmpSpinCenter
+                vec2 = depMoveVectors_Spin[i]
+                axis = vec1.cross(vec2)
+                axis_length = axis.Length
 
-            for i in range(1, len(depRefPoints_Spin)): # do not use index 0, rigid is assumed spinning around this point
-                try:
-                    vec1 = depRefPoints_Spin[i].sub(tmpSpinCenter) # 'aka Radius'
-                    #if vec1.Length < 1e-6: continue
-                    vec2 = depMoveVectors_Spin[i] # 'aka Force'
-                    axis = vec1.cross(vec2) #torque-vector
-
+                if axis_length > 0:
                     vec1.normalize()
-                    vec1.multiply(self.refPointsBoundBoxSize)
-                    vec3 = vec1.add(vec2)
+                    vec1 *= self.refPointsBoundBoxSize
+                    vec3 = vec1 + vec2
                     beta = math.degrees(vec3.getAngle(vec1))
 
                     if beta > self.maxSingleAxisError:
                         self.maxSingleAxisError = beta
 
-                    axis.multiply(1.0e6)
-                    axis.normalize()
-                    axis.multiply(beta*WEIGHT_REFPOINT_ROTATION) #here use degrees
-                    self.spin = self.spin.add(axis)
+                    axis *= (beta * WEIGHT_REFPOINT_ROTATION) / axis_length
+                    self.spin += axis
                     self.countSpinVectors += 1
-                except:
-                    pass #numerical exception above, no spin !
 
-        #compute rotation caused by axis' of the dependencies //FIXME (align,opposed,none)
-        if len(self.dependencies) > 0:
-            if self.spin is None: self.spin = Base.Vector(0,0,0)
+        # Compute rotation caused by axis of the dependencies
+        if self.dependencies:
+            if self.spin is None:
+                self.spin = Base.Vector(0, 0, 0)
 
             for dep in self.dependencies:
                 rotation = dep.getRotation(solver)
-                if rotation is None: continue       # No rotation for that dep
-
-                # Accumulate all rotations for later average calculation
-                self.spin = self.spin.add(rotation)
-                rotationLength = rotation.Length
-                if rotationLength > self.maxSingleAxisError:
-                    self.maxSingleAxisError = rotationLength
-                self.countSpinVectors += 1
+                if rotation:
+                    self.spin += rotation
+                    rotation_length = rotation.Length
+                    if rotation_length > self.maxSingleAxisError:
+                        self.maxSingleAxisError = rotation_length
+                    self.countSpinVectors += 1
 
         # Calculate max rotation error
-        if self.spin is not None:
-            axisErr = self.spin.Length
-            if axisErr > self.maxAxisError : self.maxAxisError = axisErr
+        if self.spin:
+            axis_error = self.spin.Length
+            if axis_error > self.maxAxisError:
+                self.maxAxisError = axis_error
 
-
+    def updateCachedState(self, newPlacement):
+        """
+        Update the cached state of the rigid with the new placement.
+        """
+        self.initialPlacement = newPlacement
 
     def move(self,doc):
         if self.tempfixed or self.fixed: return
