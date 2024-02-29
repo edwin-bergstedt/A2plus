@@ -694,7 +694,7 @@ to a fixed part!
                     else:
                         Msg('\n')
                         Msg('convergency-conter: {}\n'.format(self.convergencyCounter))
-                        Msg(translate("A2plus", "Calculation stopped, no convergency anymore!") + "\n")
+                        Msg(translate("A2plus", "No convergency anymore, retrying") + "\n")
                         pass
 
                 self.lastPositionError = maxPosError
