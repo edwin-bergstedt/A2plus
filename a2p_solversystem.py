@@ -668,21 +668,6 @@ to a fixed part!
             # Perform the move
             for w in workList:
                 w.move(doc)
-
-            # if self.stepCount % 100 ==0:
-            #     pos_error_save.append(maxPosError-reqPosAccuracy)
-            #     axis_error_save.append(maxAxisError-reqSpinAccuracy)
-            #     single_axis_error_save.append(maxSingleAxisError-(reqSpinAccuracy*10))
-                
-            # if maxPosError <= reqPosAccuracy and pos_error_check:
-            #     pos_error_check=False
-            #     maxPosError_itteration=self.stepCount
-            # if maxAxisError <= reqSpinAccuracy and maxAxisError_check:
-            #     maxAxisError_check=False
-            #     maxAxisError_itteration=self.stepCount
-            # if maxSingleAxisError <= reqSpinAccuracy * 10 and maxSingleAxisError_check:
-            #     maxSingleAxisError_check=False
-            #     maxSingleAxisError_itteration=self.stepCount
                 
             # The accuracy is good, apply the solution to FreeCAD's objects
             if (maxPosError <= reqPosAccuracy and   # relevant check
@@ -692,11 +677,7 @@ to a fixed part!
                 ) or (a2plib.SOLVER_ONESTEP > 0):
                 # The accuracy is good, we're done here
                 goodAccuracy = True
-                # print(maxPosError_itteration,',',maxAxisError_itteration,',',maxSingleAxisError_itteration)
-                # tmp={'Pos':pos_error_save,'Axis':axis_error_save,'Single Axis':single_axis_error_save}
-                # print(tmp)
-                # print('Axis: ',maxAxisError_itteration)
-                # print('Single Axis: ',maxSingleAxisError_itteration)
+
                 # Mark the rigids as tempfixed and add its constrained rigids to pending list to be processed next
                 for r in workList:
                     r.applySolution(doc, self)
